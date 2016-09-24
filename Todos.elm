@@ -14,19 +14,20 @@ main = App.beginnerProgram { model = model, view = view, update = update }
 -- MODEL
 type alias Model = List Todo
 model = [
-    { label = "Learn Elm", done = False}
-    , { label = "Gouge away", done = True}]
+    Todo "Learn Elm" False
+    , Todo "Gouge away" True]
 
 type alias Todo = { label: String, done: Bool }
 
 -- UPDATE
-type Msg = NoOp | ToggleDone Int
+type Msg = NoOp | ToggleDone Int | Add String
 
 update : Msg -> Model -> Model
 update msg model =
     case log "msg" msg of
         NoOp -> model
         ToggleDone dx -> toggleDone dx model
+        Add label -> todo label :: List.reverse model |> List.reverse
 
 toggleDone dx model =
     List.indexedMap
@@ -35,6 +36,8 @@ toggleDone dx model =
             else todo )
         model
 
+todo label =
+    { label = label, done = False }
 -- VIEW
 
 view : Model -> Html Msg
@@ -43,7 +46,7 @@ view model =
         div []
         [
             input [ placeholder "Todo" ] []
-            , button [] [text "Add"]
+            , button [onClick (Add "Velouria")] [text "Add"]
         ]
         , ul [] (List.indexedMap todoToLiMapper model)
         , div []
@@ -53,7 +56,6 @@ view model =
             , a[] [text "Pending"]
             , text " "
             , a[] [text "Done"]
-
         ]
     ]
 
