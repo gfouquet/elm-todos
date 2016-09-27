@@ -16,8 +16,9 @@ main = App.beginnerProgram { model = model, view = view, update = update }
 type alias Model = { todos : List Todo, input : String, filter : Filter }
 model =
     { todos =
-        [ Todo "Learn Elm" False
+        [ Todo "Velouria" False
         , Todo "Gouge away" True
+        , Todo "Subbacultcha" True
         ]
     , input = ""
     , filter = FilterAll
@@ -28,12 +29,11 @@ type alias Todo = { label: String, done: Bool }
 type Filter = FilterAll | FilterPending | FilterDone
 
 -- UPDATE
-type Msg = NoOp | ToggleDone Int | AddTodo String | InputTodo String
+type Msg = ToggleDone Int | AddTodo String | InputTodo String | ApplyFilter Filter
 
 update : Msg -> Model -> Model
 update msg model =
     case log "msg" msg of
-        NoOp -> model
         ToggleDone dx -> { model | todos = toggleDone dx model.todos }
         AddTodo label ->
             { model
@@ -41,6 +41,7 @@ update msg model =
             , input = ""
             }
         InputTodo label -> { model | input = label }
+        ApplyFilter filter -> { model | filter = filter }
 
 toggleDone dx todos =
     List.indexedMap
@@ -52,8 +53,8 @@ toggleDone dx todos =
 
 todo label =
   { label = label, done = False }
--- VIEW
 
+-- VIEW
 view : Model -> Html Msg
 view model =
     div []
@@ -69,16 +70,26 @@ view model =
                 ]
                 [text "Add"]
             ]
-        , ul [] (List.indexedMap todoToLiMapper model.todos)
+        , ul [] (model.todos |> filterTodos model.filter |> List.indexedMap todoToLiMapper)
         , div []
-            [ a [style [("font-weight", "bold")]] [text "All"]
+            [ a
+                [ style [("font-weight", filterWeight FilterAll model.filter)]
+                , onClick (ApplyFilter FilterAll)
+                ] [text "All"]
             , text " "
-            , a[] [text "Pending"]
+            , a
+                [ style [("font-weight", filterWeight FilterPending model.filter)]
+                , onClick (ApplyFilter FilterPending)
+                ] [text "Pending"]
             , text " "
-            , a[] [text "Done"]
+            , a
+                [ style [("font-weight", filterWeight FilterDone model.filter)]
+                , onClick (ApplyFilter FilterDone)
+                ] [text "Done"]
             ]
         ]
 
+todoToLiMapper : Int -> Todo -> Html Msg
 todoToLiMapper dx todo =
     li
         [style [( "text-decoration", liDecoration todo )]
@@ -86,7 +97,19 @@ todoToLiMapper dx todo =
         ]
         [text todo.label]
 
+liDecoration : Todo -> String
 liDecoration todo =
     case todo.done of
         True -> "line-through"
         False -> "none"
+
+filterTodos : Filter -> List Todo -> List Todo
+filterTodos filter todos =
+    case filter of
+    FilterAll -> todos
+    FilterPending -> List.filter (\todo -> not todo.done) todos
+    FilterDone -> List.filter (\todo -> todo.done) todos
+
+filterWeight : Filter -> Filter -> String
+filterWeight current active =
+    if current == active then "bold" else "normal"
