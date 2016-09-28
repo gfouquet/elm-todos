@@ -44,12 +44,12 @@ update msg model =
         ApplyFilter filter -> { model | filter = filter }
 
 toggleDone dx todos =
-    List.indexedMap
-        ( \n todo ->
-            if n == dx then { todo | done = not todo.done }
+    let
+        toggler n todo =
+            if n == dx
+            then { todo | done = not todo.done }
             else todo
-        )
-        todos
+    in List.indexedMap toggler todos
 
 todo label =
   { label = label, done = False }
@@ -66,50 +66,55 @@ view model =
                 ] []
             , button
                 [ onClick (AddTodo model.input)
-                , disabled (log "input length" String.length model.input == 0)
+                , disabled (String.length model.input == 0)
                 ]
                 [text "Add"]
             ]
-        , ul [] (model.todos |> filterTodos model.filter |> List.indexedMap todoToLiMapper)
+        , ul [] (filteredTodos model |> List.indexedMap todoItem)
         , div []
-            [ a
-                [ style [("font-weight", filterWeight FilterAll model.filter)]
-                , onClick (ApplyFilter FilterAll)
-                ] [text "All"]
-            , text " "
-            , a
-                [ style [("font-weight", filterWeight FilterPending model.filter)]
-                , onClick (ApplyFilter FilterPending)
-                ] [text "Pending"]
-            , text " "
-            , a
-                [ style [("font-weight", filterWeight FilterDone model.filter)]
-                , onClick (ApplyFilter FilterDone)
-                ] [text "Done"]
+            [ filterButton model FilterAll "All"
+            , filterButton model FilterPending "Pending"
+            , filterButton model FilterDone "Done"
             ]
         ]
 
-todoToLiMapper : Int -> Todo -> Html Msg
-todoToLiMapper dx todo =
-    li
-        [style [( "text-decoration", liDecoration todo )]
-        , onClick (ToggleDone dx)
-        ]
-        [text todo.label]
+todoItem : Int -> Todo -> Html Msg
+todoItem dx todo =
+    let
+        textDeco : Todo -> String
+        textDeco todo =
+            case todo.done of
+                True -> "line-through"
+                False -> "none"
+    in
+        li
+            [style [( "text-decoration", textDeco todo )]
+            , onClick (ToggleDone dx)
+            ]
+            [text todo.label]
 
-liDecoration : Todo -> String
-liDecoration todo =
-    case todo.done of
-        True -> "line-through"
-        False -> "none"
+filteredTodos : Model -> List Todo
+filteredTodos model =
+    let {filter, todos} = model
+    in
+        case filter of
+            FilterAll -> todos
+            FilterPending -> List.filter (\todo -> not todo.done) todos
+            FilterDone -> List.filter (\todo -> todo.done) todos
 
-filterTodos : Filter -> List Todo -> List Todo
-filterTodos filter todos =
-    case filter of
-    FilterAll -> todos
-    FilterPending -> List.filter (\todo -> not todo.done) todos
-    FilterDone -> List.filter (\todo -> todo.done) todos
-
-filterWeight : Filter -> Filter -> String
-filterWeight current active =
-    if current == active then "bold" else "normal"
+filterButton : Model -> Filter -> String -> Html Msg
+filterButton model event label =
+    let
+        fontWeight : Filter -> Filter -> String
+        fontWeight current active =
+            if current == active then "bold" else "normal"
+    in
+        a
+            [style
+                [("font-weight", fontWeight model.filter event)
+                , ("margin-right", "4px")
+                , ("margin-left", "4px")
+                ]
+            , onClick (ApplyFilter event)
+            ]
+            [text label]
